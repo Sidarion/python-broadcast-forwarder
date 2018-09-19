@@ -39,6 +39,17 @@ import select
 # Only to have a time stamp in the diagnose output
 from datetime import datetime
 
+def main():	
+	args = Options(InputOptions)
+	
+	if not args.debug:
+		daemonize(args.pidfile)
+	
+	while True:
+		data2send=listener(args.destination,args.port,args.debug)
+		
+		sender(args.destination,args.port,data2send,args.debug)
+
 
 def listener(destination,port,debug):
 # Define Listening socket and extract the data from it
@@ -46,22 +57,23 @@ def listener(destination,port,debug):
 	server_address=(destination,port)
 
 	if debug:
-		print'Starting Listener at ',datetime.now()
+		print('Starting Listener at ', datetime.now())
 	
 	# Create Listening socket
 	server = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
 	server.bind(server_address)
 
 	# Listener waits for incoming packet. The "client" denotes the sender of the incoming packet and is not used anywhere (yet).
-	data, client = server.recvfrom(65535)
+	#data, client = server.recvfrom(65535)
+	data = server.recvfrom(65535)[0]
 	
-	return data;
+	return data
 
 def sender(destination,port,data,debug):
 # Define Sender socket and send data to it
 
 	if debug:
-		print "Received Data: ",data
+		print("Received Data: ", data)
 	
 	# Create Sender socket
 	sender = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -92,13 +104,13 @@ def Options(InputOptions):
 	options = parser.parse_args()
 	
 	if options.port < 1 or options.port > 65535:
-		print "No valid Port. Please set port in the valid port range."
+		print("No valid Port. Please set port in the valid port range.")
 		exit()
 
 	if options.debug:
-		print options
+		print(options)
 	
-	return options;
+	return options
 
 def daemonize(pidFileName):
     if pidFileName:
@@ -118,16 +130,5 @@ def daemonize(pidFileName):
         # Parent process exits immediately.
         sys.exit(0)
 		
-def main():	
-	args = Options(InputOptions)
-	
-	if not args.debug:
-		daemonize(args.pidfile)
-	
-	while True:
-		data2send=listener(args.destination,args.port,args.debug)
-		
-		sender(args.destination,args.port,data2send,args.debug)
-
 if __name__ == "__main__":
     main()
