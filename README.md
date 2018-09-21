@@ -1,6 +1,9 @@
 # Python Broadcast Forwarder #
 
-This project is designed to create a Python script for Linux which listens for directed broadcasts and forwards them over the correct interface. Examples for directed broadcasts are Wake-on-LAN and Windows SCCM.
+This project is designed to create a Python script for Linux which
+listens for directed broadcasts and forwards them over the correct
+interface. Examples for directed broadcasts are Wake-on-LAN and
+Windows SCCM.
 
 ## Getting started ##
 
