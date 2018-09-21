@@ -1,14 +1,15 @@
 # Python Broadcast Forwarder #
 
-This project is designed to create a Python script for Linux which
-listens for directed broadcasts and forwards them over the correct
-interface. Examples for directed broadcasts are Wake-on-LAN and
-Windows SCCM.
+pbf.py listens for directed broadcasts and forwards them over the correct
+interface. Examples for directed broadcasts are Wake-on-LAN and Windows
+SCCM.
+
+pbf.py has been tested on Linux.
 
 ## Getting started ##
 
 ### Prerequisites ###
-Python needs to be installed on your Linux router.
+Python needs to be installed on your router.
 
 ### Installing ###
 1. Copy the file pbf.py on your Linux router
@@ -19,6 +20,6 @@ chmod 755 pbh.py`
 `pbf.py -p Port -b Broadcast_IP`
 
 ## Testing ##
-1. Start the script on your Linux router.
+1. Start the script on your router.
 2. Send a directed broadcast to the router.
 3. Check if the broadcast arrives in the correct subnet.

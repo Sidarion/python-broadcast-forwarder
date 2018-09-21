@@ -1,6 +1,6 @@
 #!/usr/bin/env python2
 #
-# Python Broadcast Forwarder for Linux
+# Python Broadcast Forwarder
 #
 # Copyright 2018 Reto Haeberli, based on the script pbh created by Dale Sedivec, Copyright 2006
 #
