@@ -18,7 +18,7 @@ chmod 755 pbh.py`
 3. Run the script using the command
 `pbf.py -p Port -b Broadcast_IP`
 
-## Running the test ##
+## Testing ##
 1. Start the script on your Linux router.
 2. Send a directed broadcast to the router.
-3. Check, if the broadcast arrives in the correct subnet.
+3. Check if the broadcast arrives in the correct subnet.
