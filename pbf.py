@@ -2,7 +2,12 @@
 #
 # Python Broadcast Forwarder
 #
-# Copyright 2018 Reto Haeberli, based on the script pbh created by Dale Sedivec, Copyright 2006
+# Copyright 2018 Reto Haeberli
+#
+# Based on the script pbh created by Dale Sedivec, Copyright 2006,
+# retrieved from:
+# * http://darkness.codefu.org/wordpress/2006/02/udp-directed-broadcast-helper/
+# * http://www.codefu.org/people/darkness/pbh-0.2.tar.gz
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
