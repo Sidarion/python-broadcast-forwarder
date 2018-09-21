@@ -28,7 +28,7 @@
 #
 # Generates a listener and forwards the packet. The following input options are available:
 # -p Listening Port
-# -d Listening IP
+# -b Broadcast IP
 # --debug Enable Debugging Mode (optional)
 #########################################################################################################
 
