@@ -46,15 +46,15 @@ def main():
 		daemonize(args.pidfile)
 	
 	while True:
-		data2send=listener(args.destination,args.port,args.debug)
+		data2send=listener(args.broadcastip,args.port,args.debug)
 		
-		sender(args.destination,args.port,data2send,args.debug)
+		sender(args.broadcastip,args.port,data2send,args.debug)
 
 
-def listener(destination,port,debug):
+def listener(broadcastip,port,debug):
 # Define Listening socket and extract the data from it
 
-	server_address=(destination,port)
+	server_address=(broadcastip,port)
 
 	if debug:
 		print('Starting Listener at ', datetime.now())
@@ -69,7 +69,7 @@ def listener(destination,port,debug):
 	
 	return data
 
-def sender(destination,port,data,debug):
+def sender(broadcastip,port,data,debug):
 # Define Sender socket and send data to it
 
 	if debug:
@@ -80,7 +80,7 @@ def sender(destination,port,data,debug):
 	sender.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, True)
 
 	# Send data to the socket
-	client_address=(destination,port)
+	client_address=(broadcastip,port)
 	sender.sendto(data,client_address)
 	
 	if debug:
@@ -90,7 +90,7 @@ def Options(InputOptions):
 # Options Parser
 
 	parser = InputOptions.ArgumentParser(description='Take Inputs')
-	parser.add_argument("-d", "--destination", type=str, required=True,
+	parser.add_argument("-b", "--broadcastip", type=str, required=True,
 						help="broadcast IP address to listen for")
 	parser.add_argument("-p", "--port", type=int, required=True,
 						help="UDP port to listen for (numeric)")

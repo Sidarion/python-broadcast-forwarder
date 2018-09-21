@@ -13,7 +13,7 @@ Python needs to be installed on your Linux router.
  `chown root:root pbh.py
 chmod 755 pbh.py`
 3. Run the script using the command
-`pbf.py -p [Port] -d [Listening IP]`
+`pbf.py -p Port -b Broadcast_IP`
 
 ## Running the test ##
 1. Start the script on your Linux router.
