@@ -90,9 +90,9 @@ def Options(InputOptions):
 # Options Parser
 
 	parser = InputOptions.ArgumentParser(description='Take Inputs')
-	parser.add_argument("-d", "--destination", type=str,
+	parser.add_argument("-d", "--destination", type=str, required=True,
 						help="broadcast IP address to listen for")
-	parser.add_argument("-p", "--port", type=int,
+	parser.add_argument("-p", "--port", type=int, required=True,
 						help="UDP port to listen for (numeric)")
 	parser.add_argument("--debug",
 						help=("enable debugging mode"),
