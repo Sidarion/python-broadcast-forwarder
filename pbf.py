@@ -49,47 +49,59 @@ def main():
 	
 	if not args.debug:
 		daemonize(args.pidfile)
+
+	# Create Listening socket
+	server_address=(args.broadcastip,args.port)
+	listener_socket = socket.socket(socket.AF_INET,socket.SOCK_RAW, socket.IPPROTO_UDP)
+	listener_socket.bind(server_address)
+
+	if args.debug:
+		print('Starting Listener at ', datetime.now())
+
+	# Create Sender socket
+	sender_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_UDP)
+	sender_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, True)  # Enables Broadcast
+	sender_socket.setsockopt(socket.IPPROTO_IP, socket.IP_TTL, 1)  # Sets TTL = 1
 	
 	while True:
-		data2send=listener(args.broadcastip,args.port,args.debug)
+		(data2send,ttl)=listener(args.broadcastip,args.port,args.debug,listener_socket)
 		
-		sender(args.broadcastip,args.port,data2send,args.debug)
+		sender(args.broadcastip,args.port,data2send,args.debug,sender_socket,ttl)
 
 
-def listener(broadcastip,port,debug):
+def listener(broadcastip,port,debug,server):
 # Define Listening socket and extract the data from it
 
 	server_address=(broadcastip,port)
 
-	if debug:
-		print('Starting Listener at ', datetime.now())
-	
-	# Create Listening socket
-	server = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
-	server.bind(server_address)
-
-	# Listener waits for incoming packet. The "client" denotes the sender of the incoming packet and is not used anywhere (yet).
-	#data, client = server.recvfrom(65535)
+	# Listener waits for incoming packet and saves the content as "data".
 	data = server.recvfrom(65535)[0]
-	
-	return data
 
-def sender(broadcastip,port,data,debug):
+	header = struct.unpack('!BBHHHBBH4s4s', data[:20])
+	ttl = header[5]
+	
+	if debug:
+		print("Header data: ", header)
+		print ("Protocol: ", header[6])
+		print ("TTL: ", header[5])
+	
+	return (data,ttl)
+
+def sender(broadcastip,port,data,debug,sender_socket,ttl):
 # Define Sender socket and send data to it
 
-	if debug:
-		print("Received Data: ", data)
-	
-	# Create Sender socket
-	sender = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-	sender.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, True)
+	if ttl > 1:
 
-	# Send data to the socket
-	client_address=(broadcastip,port)
-	sender.sendto(data,client_address)
+		# Send data to the socket
+		client_address=(broadcastip,port)
+		sender_socket.sendto(data,client_address)
 	
-	if debug:
-		print ("Packet successfully sent! \n")
+		if debug:
+			print ("Packet successfully sent! \n")
+
+	else:
+		print("Replay Packet drop")
+
 
 def Options(InputOptions):
 # Options Parser

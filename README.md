@@ -14,8 +14,8 @@ Python needs to be installed on your router.
 ### Installing ###
 1. Copy the file pbf.py on your Linux router
 2. Set the correct permissions, for example
- `chown root:root pbh.py
-chmod 755 pbh.py`
+ `chown root:root pbf.py
+chmod 755 pbf.py`
 3. Run the script using the command
 `pbf.py -p Port -b Broadcast_IP`
 
