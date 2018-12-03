@@ -30,19 +30,19 @@
 # -p Listening Port
 # -b Broadcast IP
 # --debug Enable Debugging Mode (optional)
+# --pidfile (file name): Wirites process ID to a file called "pidfile"
 #########################################################################################################
 
 import sys
 import argparse as InputOptions
 import itertools
 import os
-
 import struct
 import socket
-import select
 
 # Only to have a time stamp in the diagnose output
 from datetime import datetime
+
 
 def main():	
 	args = Options(InputOptions)
@@ -50,45 +50,60 @@ def main():
 	if not args.debug:
 		daemonize(args.pidfile)
 
-	# Create Listening socket
-	server_address=(args.broadcastip,args.port)
-	listener_socket = socket.socket(socket.AF_INET,socket.SOCK_RAW, socket.IPPROTO_UDP)
-	listener_socket.bind(server_address)
-
-	if args.debug:
-		print('Starting Listener at ', datetime.now())
-
-	# Create Sender socket
-	sender_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_UDP)
-	sender_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, True)  # Enables Broadcast
-	sender_socket.setsockopt(socket.IPPROTO_IP, socket.IP_TTL, 1)  # Sets TTL = 1
+	# Create sockets
+	listener_socket = listening_socket(args.broadcastip,args.port,args.debug)
+	sender_socket = sending_socket(args.debug)
 	
 	while True:
+	# Extract Data from listening socket and send it to the sender socket
 		(data2send,ttl)=listener(args.broadcastip,args.port,args.debug,listener_socket)
 		
 		sender(args.broadcastip,args.port,data2send,args.debug,sender_socket,ttl)
 
 
+def listening_socket(destination,port,debug):
+
+	server_address=(destination,port)
+	listener_socket = socket.socket(socket.AF_INET,socket.SOCK_RAW, socket.IPPROTO_UDP)
+	listener_socket.bind(server_address)
+
+	if debug:
+		print ('Starting Listener at ' + str(datetime.now()))
+
+	return listener_socket
+
+def sending_socket(debug):
+	sender_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_UDP)
+	sender_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, True)  # Enable Broadcast
+	sender_socket.setsockopt(socket.IPPROTO_IP, socket.IP_TTL, 1)  # Set TTL = 1
+
+	if debug:
+		print ('Starting Sender at ' + str(datetime.now()) + '\n')
+
+	return sender_socket
+
+
 def listener(broadcastip,port,debug,server):
-# Define Listening socket and extract the data from it
+# Extract data from the listening socket
 
 	server_address=(broadcastip,port)
 
 	# Listener waits for incoming packet and saves the content as "data".
 	data = server.recvfrom(65535)[0]
 
+	# From the data packet, interpret the fist 20 Bytes as follows:
+	# Version/IHL, ToS, Length, ID, Flags/Fragment, TTL, Proto, Checksum, Src IP, Dst IP
 	header = struct.unpack('!BBHHHBBH4s4s', data[:20])
 	ttl = header[5]
 	
 	if debug:
 		print("Header data: ", header)
-		print ("Protocol: ", header[6])
 		print ("TTL: ", header[5])
 	
 	return (data,ttl)
 
 def sender(broadcastip,port,data,debug,sender_socket,ttl):
-# Define Sender socket and send data to it
+# Send data to the sender socket
 
 	if ttl > 1:
 
@@ -97,10 +112,11 @@ def sender(broadcastip,port,data,debug,sender_socket,ttl):
 		sender_socket.sendto(data,client_address)
 	
 		if debug:
-			print ("Packet successfully sent! \n")
+			print ("Packet successfully sent \n")
 
 	else:
-		print("Replay Packet drop")
+		if debug:
+			print("Replay Packet drop \n")
 
 
 def Options(InputOptions):
@@ -125,27 +141,37 @@ def Options(InputOptions):
 		exit()
 
 	if options.debug:
-		print(options)
+		print("\n" + str(options))
 	
 	return options
 
+
 def daemonize(pidFileName):
-    if pidFileName:
-        pidFile = open(pidFileName, "w")
-    pid = os.fork()
-    if pid == 0:
-        os.setsid()
-        os.chdir("/")
+# Creates a child process and terminates the parent process
+
+	if pidFileName:
+	# If option set, create file to write process ID in it later
+		pidFile = open(pidFileName, "w")
+
+
+	pid = os.fork()
+    
+
+	if pid == 0: # If child process: Remove rights
+		os.setsid()
+		os.chdir("/")
         for fd in (0, 1, 2):
             os.close(fd)
         if pidFileName:
             pidFile.close()
-    else:
-        if pidFileName:
-            pidFile.write("%d\n" % (pid,))
-            pidFile.close()
+
+	else: # If parent process: Terminate process
+		if pidFileName:
+			pidFile.write("%d\n" % (pid,))
+			pidFile.close()
         # Parent process exits immediately.
-        sys.exit(0)
+		sys.exit(0)
+
 		
 if __name__ == "__main__":
     main()
