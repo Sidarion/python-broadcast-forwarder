@@ -95,8 +95,10 @@ def pbf_recv(server,debug):
 	ttl = header[5]
 	
 	if debug:
-		print("Header data: ", header)
-		print ("TTL: ", header[5])
+                src_ip = socket.inet_ntoa(header[8])
+                dst_ip = socket.inet_ntoa(header[9])
+
+                print("Received: Header data: ", ("Vers/IHL: %d. ToS: %d, Len: %d, ID: %d, Flags/Fragment: %d, TTL: %d, Proto: %d, Checksum: %d" % header[:8]), ("Src: %s, Dst: %s" % (src_ip, dst_ip)))
 	
 	return (data,ttl)
 
