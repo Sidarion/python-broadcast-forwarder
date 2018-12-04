@@ -30,9 +30,17 @@
 # -s Source IP
 # -p Listening Port
 # -b Broadcast IP
-# --debug Enable Debugging Mode (optional)
+# --loglevel number
+LOG_NONE          = 0 # default -  no debug, pbf.py will start daemonized
+LOG_LIFECYCLE     = 1 #         -  log start stop
+LOG_SUCCESS       = 2 #         -  also log              successful forwards
+LOG_SUCCESS_TRACE = 3 #         -  also log pkg trace of successful forwards
+LOG_FAIL          = 4 #         -  also log              ignored    forwards
+LOG_FAIL_TRACE    = 5 #         -  also log pkg trace of ignored    forwards
+#
 # --pidfile (file name): Wirites process ID to a file called "pidfile"
 #########################################################################################################
+
 
 import sys
 import argparse as InputOptions
@@ -48,7 +56,9 @@ from datetime import datetime
 def main():	
 	args = Options(InputOptions)
 	
-	if not args.debug:
+	log_level = args.loglevel
+
+	if not log_level:
 		daemonize(args.pidfile)
 
         if args.allowedsourceip is None:
@@ -57,40 +67,44 @@ def main():
 		allowed_sourceip = struct.unpack("!4s", socket.inet_aton(args.allowedsourceip))[0]
 
 	# Create sockets
-	listener_socket = listening_socket(args.broadcastip, args.port, args.debug)
-	sender_socket = sending_socket(args.debug)
+	listener_socket = listening_socket(args.broadcastip, args.port, log_level)
+	sender_socket = sending_socket(log_level)
 	
 	while True:
 	# Extract Data from listening socket and send it to the sender socket
-		(data2send, ttl)=pbf_recv(allowed_sourceip, listener_socket, args.debug)
+		(data2send, ttl)=pbf_recv(allowed_sourceip, listener_socket, log_level)
 		
 		if data2send is not None:
-			pbf_send(args.broadcastip, args.port, data2send, sender_socket, ttl, args.debug)
+			pbf_send(args.broadcastip, args.port, data2send, sender_socket, ttl, log_level)
 
 
-def listening_socket(destination, port, debug):
+# output message only message of requested log level <= log level of message
+#
+def dbg(msg, log_level, msg_level):
+	if log_level <= msg_level:
+		print(msg)
+
+def listening_socket(destination, port, log_level):
 
 	server_address=(destination, port)
 	listener_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_UDP)
 	listener_socket.bind(server_address)
 
-	if debug:
-		print ('Starting Listener at ' + str(datetime.now()))
+	dbg('Starting Listener at ' + str(datetime.now()), log_level, LOG_LIFECYCLE)
 
 	return listener_socket
 
-def sending_socket(debug):
+def sending_socket(log_level):
 	sender_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_UDP)
 	sender_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, True)  # Enable Broadcast
 	sender_socket.setsockopt(socket.IPPROTO_IP, socket.IP_TTL, 1)  # Set TTL = 1
 
-	if debug:
-		print ('Starting Sender at ' + str(datetime.now()) + '\n')
+	dbg( ('Starting Sender at ' + str(datetime.now())), log_level, LOG_LIFECYCLE)
 
 	return sender_socket
 
 
-def pbf_recv(allowed_sourceip, server, debug):
+def pbf_recv(allowed_sourceip, server, log_level):
 	"""Extract data from the listening socket.
 	   When allowed_sourceip is set, then
 	   * (data,ttl) will get returned if 'src_ip == allowed_sourceip'.
@@ -105,7 +119,9 @@ def pbf_recv(allowed_sourceip, server, debug):
 	hdr = struct.unpack('!BBHHHBBH4s4s', data[:20])
 	ttl = hdr[5]
 	
-	if debug:
+        pkt_trace = None
+
+	if log_level >= LOG_SUCCESS_TRACE:
                 src_ip = socket.inet_ntoa(hdr[8])
                 dst_ip = socket.inet_ntoa(hdr[9])
 
@@ -119,16 +135,18 @@ def pbf_recv(allowed_sourceip, server, debug):
                 #              7 - checksum
                 #              8 - src IP
                 #              9 - dst IP
-                print("Received: Header data: ToS: %d, ID: %d, flags/frag: %d, TTL: %d, src: %s, dst: %s" %
-                                             (hdr[1],  hdr[3], hdr[4],         hdr[5],  src_ip,  dst_ip))
+                pkt_trace = ("Received: Header data: ToS: %d, ID: %d, flags/frag: %d, TTL: %d, src: %s, dst: %s" %
+                                                     (hdr[1], hdr[3], hdr[4],         hdr[5],  src_ip,  dst_ip))
 	
         if (allowed_sourceip is not None) and (allowed_sourceip != hdr[8]):
-                print("Ignoring that packet, source IP doesn't match given '-s' parameter\n")
+                dbg(pkt_trace, log_level, LOG_FAIL_TRACE)
+                dbg("Ignoring that packet, source IP doesn't match given '-s' parameter\n", log_level, LOG_FAIL)
 		return (None, None)
         else:
+                dbg(pkt_trace, log_level, LOG_SUCCESS_TRACE)
 		return (data, ttl)
 
-def pbf_send(broadcastip, port, data, sender_socket, ttl, debug):
+def pbf_send(broadcastip, port, data, sender_socket, ttl, log_level):
 # Send data to the sender socket
 
 	if ttl > 1:
@@ -137,12 +155,10 @@ def pbf_send(broadcastip, port, data, sender_socket, ttl, debug):
 		client_address=(broadcastip, port)
 		sender_socket.sendto(data, client_address)
 	
-		if debug:
-			print ("Packet successfully sent \n")
+                dbg("Packet successfully sent \n", log_level, LOG_SUCCESS)
 
 	else:
-		if debug:
-			print("Replay Packet drop \n")
+                dbg("TTL == 1 - not forwarded\n",  log_level, LOG_FAIL)
 
 
 def Options(InputOptions):
@@ -155,9 +171,8 @@ def Options(InputOptions):
 						help="broadcast IP address to listen for")
 	parser.add_argument("-p", "--port", type=int, required=True,
 						help="UDP port to listen for (numeric)")
-	parser.add_argument("--debug",
-						help=("enable debugging mode"),
-						action="store_const", const=True)
+	parser.add_argument("-l", "--loglevel", type=int, required=False, default=0,
+						help="set log level. 0 let's pbf start as daemon. Look into the header of pbf.py for log level descriptions")
 	parser.add_argument("--pidfile", type=str,
                         help=("write PID to FILE"), metavar="FILE")
 	
@@ -168,7 +183,7 @@ def Options(InputOptions):
 		print("No valid Port. Please set port in the valid port range.")
 		exit()
 
-	if options.debug:
+	if options.loglevel:
 		print("\n" + str(options))
 	
 	return options
