@@ -57,21 +57,21 @@ def main():
 		allowed_sourceip = struct.unpack("!4s", socket.inet_aton(args.allowedsourceip))[0]
 
 	# Create sockets
-	listener_socket = listening_socket(args.broadcastip,args.port,args.debug)
+	listener_socket = listening_socket(args.broadcastip, args.port, args.debug)
 	sender_socket = sending_socket(args.debug)
 	
 	while True:
 	# Extract Data from listening socket and send it to the sender socket
-		(data2send,ttl)=pbf_recv(allowed_sourceip,listener_socket,args.debug)
+		(data2send, ttl)=pbf_recv(allowed_sourceip, listener_socket, args.debug)
 		
 		if data2send is not None:
-			pbf_send(args.broadcastip,args.port,data2send,sender_socket,ttl,args.debug)
+			pbf_send(args.broadcastip, args.port, data2send, sender_socket, ttl, args.debug)
 
 
-def listening_socket(destination,port,debug):
+def listening_socket(destination, port, debug):
 
-	server_address=(destination,port)
-	listener_socket = socket.socket(socket.AF_INET,socket.SOCK_RAW, socket.IPPROTO_UDP)
+	server_address=(destination, port)
+	listener_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_UDP)
 	listener_socket.bind(server_address)
 
 	if debug:
@@ -90,7 +90,7 @@ def sending_socket(debug):
 	return sender_socket
 
 
-def pbf_recv(allowed_sourceip,server,debug):
+def pbf_recv(allowed_sourceip, server, debug):
 	"""Extract data from the listening socket.
 	   When allowed_sourceip is set, then
 	   * (data,ttl) will get returned if 'src_ip == allowed_sourceip'.
@@ -124,18 +124,18 @@ def pbf_recv(allowed_sourceip,server,debug):
 	
         if (allowed_sourceip is not None) and (allowed_sourceip != hdr[8]):
                 print("Ignoring that packet, source IP doesn't match given '-s' parameter\n")
-		return (None,None)
+		return (None, None)
         else:
-		return (data,ttl)
+		return (data, ttl)
 
-def pbf_send(broadcastip,port,data,sender_socket,ttl,debug):
+def pbf_send(broadcastip, port, data, sender_socket, ttl, debug):
 # Send data to the sender socket
 
 	if ttl > 1:
 
 		# Send data to the socket
-		client_address=(broadcastip,port)
-		sender_socket.sendto(data,client_address)
+		client_address=(broadcastip, port)
+		sender_socket.sendto(data, client_address)
 	
 		if debug:
 			print ("Packet successfully sent \n")
@@ -195,7 +195,7 @@ def daemonize(pidFileName):
 
 	else: # If parent process: Terminate process
 		if pidFileName:
-			pidFile.write("%d\n" % (pid,))
+			pidFile.write("%d\n" % pid)
 			pidFile.close()
         # Parent process exits immediately.
 		sys.exit(0)
