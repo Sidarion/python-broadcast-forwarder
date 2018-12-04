@@ -119,8 +119,8 @@ def pbf_recv(allowed_sourceip,server,debug):
                 #              7 - checksum
                 #              8 - src IP
                 #              9 - dst IP
-                print("Received: Header data: vers/IHL: %d. ToS: %d, ID: %d, flags/frag: %d, TTL: %d, src: %s, dst: %s" %
-                                              (hdr[0],      hdr[1],  hdr[3], hdr[4],         hdr[5],  src_ip,  dst_ip))
+                print("Received: Header data: ToS: %d, ID: %d, flags/frag: %d, TTL: %d, src: %s, dst: %s" %
+                                             (hdr[1],  hdr[3], hdr[4],         hdr[5],  src_ip,  dst_ip))
 	
         if (allowed_sourceip is not None) and (allowed_sourceip != hdr[8]):
                 print("Ignoring that packet, source IP doesn't match given '-s' parameter\n")
