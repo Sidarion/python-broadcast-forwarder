@@ -56,7 +56,7 @@ def main():
 	
 	while True:
 	# Extract Data from listening socket and send it to the sender socket
-		(data2send,ttl)=pbf_recv(args.broadcastip,args.port,args.debug,listener_socket)
+		(data2send,ttl)=pbf_recv(args.debug,listener_socket)
 		
 		pbf_send(args.broadcastip,args.port,data2send,args.debug,sender_socket,ttl)
 
@@ -83,10 +83,8 @@ def sending_socket(debug):
 	return sender_socket
 
 
-def pbf_recv(broadcastip,port,debug,server):
+def pbf_recv(debug,server):
 # Extract data from the listening socket
-
-	server_address=(broadcastip,port)
 
 	# Listener waits for incoming packet and saves the content as "data".
 	data = server.recvfrom(65535)[0]
