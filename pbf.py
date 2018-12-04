@@ -27,6 +27,7 @@
 #########################################################################################################
 #
 # Generates a listener and forwards the packet. The following input options are available:
+# -s Source IP
 # -p Listening Port
 # -b Broadcast IP
 # --debug Enable Debugging Mode (optional)
@@ -50,15 +51,21 @@ def main():
 	if not args.debug:
 		daemonize(args.pidfile)
 
+        if args.allowedsourceip is None:
+		allowed_sourceip = None
+        else:
+		allowed_sourceip = struct.unpack("!4s", socket.inet_aton(args.allowedsourceip))[0]
+
 	# Create sockets
 	listener_socket = listening_socket(args.broadcastip,args.port,args.debug)
 	sender_socket = sending_socket(args.debug)
 	
 	while True:
 	# Extract Data from listening socket and send it to the sender socket
-		(data2send,ttl)=pbf_recv(listener_socket,args.debug)
+		(data2send,ttl)=pbf_recv(allowed_sourceip,listener_socket,args.debug)
 		
-		pbf_send(args.broadcastip,args.port,data2send,sender_socket,ttl,args.debug)
+		if data2send is not None:
+			pbf_send(args.broadcastip,args.port,data2send,sender_socket,ttl,args.debug)
 
 
 def listening_socket(destination,port,debug):
@@ -83,8 +90,12 @@ def sending_socket(debug):
 	return sender_socket
 
 
-def pbf_recv(server,debug):
-# Extract data from the listening socket
+def pbf_recv(allowed_sourceip,server,debug):
+	"""Extract data from the listening socket.
+	   When allowed_sourceip is set, then
+	   * (data,ttl) will get returned if 'src_ip == allowed_sourceip'.
+	   * (None, None) will get returned if it doesn't match
+	"""
 
 	# Listener waits for incoming packet and saves the content as "data".
 	data = server.recvfrom(65535)[0]
@@ -111,7 +122,11 @@ def pbf_recv(server,debug):
                 print("Received: Header data: vers/IHL: %d. ToS: %d, ID: %d, flags/frag: %d, TTL: %d, src: %s, dst: %s" %
                                               (hdr[0],      hdr[1],  hdr[3], hdr[4],         hdr[5],  src_ip,  dst_ip))
 	
-	return (data,ttl)
+        if (allowed_sourceip is not None) and (allowed_sourceip != hdr[8]):
+                print("Ignoring that packet, source IP doesn't match given '-s' parameter\n")
+		return (None,None)
+        else:
+		return (data,ttl)
 
 def pbf_send(broadcastip,port,data,sender_socket,ttl,debug):
 # Send data to the sender socket
@@ -134,6 +149,8 @@ def Options(InputOptions):
 # Options Parser
 
 	parser = InputOptions.ArgumentParser(description='Take Inputs')
+	parser.add_argument("-s", "--allowedsourceip", type=str, required=False,
+						help="source IP address to listen for")
 	parser.add_argument("-b", "--broadcastip", type=str, required=True,
 						help="broadcast IP address to listen for")
 	parser.add_argument("-p", "--port", type=int, required=True,
