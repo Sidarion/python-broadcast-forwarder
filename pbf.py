@@ -91,14 +91,25 @@ def pbf_recv(server,debug):
 
 	# From the data packet, interpret the fist 20 Bytes as follows:
 	# Version/IHL, ToS, Length, ID, Flags/Fragment, TTL, Proto, Checksum, Src IP, Dst IP
-	header = struct.unpack('!BBHHHBBH4s4s', data[:20])
-	ttl = header[5]
+	hdr = struct.unpack('!BBHHHBBH4s4s', data[:20])
+	ttl = hdr[5]
 	
 	if debug:
-                src_ip = socket.inet_ntoa(header[8])
-                dst_ip = socket.inet_ntoa(header[9])
+                src_ip = socket.inet_ntoa(hdr[8])
+                dst_ip = socket.inet_ntoa(hdr[9])
 
-                print("Received: Header data: ", ("Vers/IHL: %d. ToS: %d, Len: %d, ID: %d, Flags/Fragment: %d, TTL: %d, Proto: %d, Checksum: %d" % header[:8]), ("Src: %s, Dst: %s" % (src_ip, dst_ip)))
+                # Header data: 0 - vers/IHL
+                #              1 - ToS
+                #              2 - len
+                #              3 - ID
+                #              4 - flags/fragment
+                #              5 - TTL
+                #              6 - proto
+                #              7 - checksum
+                #              8 - src IP
+                #              9 - dst IP
+                print("Received: Header data: vers/IHL: %d. ToS: %d, ID: %d, flags/frag: %d, TTL: %d, prot: %d, src: %s, dst: %s" %
+                                              (hdr[0],      hdr[1],  hdr[3], hdr[4],         hdr[5],  hdr[6],   src_ip,  dst_ip))
 	
 	return (data,ttl)
 
