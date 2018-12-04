@@ -113,7 +113,7 @@ def pbf_recv(server,debug):
 	
 	return (data,ttl)
 
-def pbf_sender(broadcastip,port,data,sender_socket,ttl,debug):
+def pbf_send(broadcastip,port,data,sender_socket,ttl,debug):
 # Send data to the sender socket
 
 	if ttl > 1:
