@@ -17,7 +17,7 @@ Python needs to be installed on your router.
  `chown root:root pbf.py
 chmod 755 pbf.py`
 3. Run the script using the command
-`pbf.py -p Port -b Broadcast_IP`
+`pbf.py -s SOURCE_IP -b BROADCAST_IP -p DESTINATION_PORT --loglevel [0-5]`
 
 ## Testing ##
 1. Start the script on your router.
