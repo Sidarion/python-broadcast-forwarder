@@ -108,8 +108,8 @@ def sending_socket(log_level):
 def pbf_recv(allowed_sourceip, server, port, log_level):
 	"""Extract data from the listening socket.
 	   When allowed_sourceip is set, then
-	   * (data,ttl) will get returned if 'src_ip == allowed_sourceip' and 'port == dst_port'.
-	   * (None, None) will get returned if it doesn't match
+	   * 'data' will get returned if 'src_ip == allowed_sourceip' and 'port == dst_port'.
+	   * 'None' will get returned if it doesn't match
 	"""
 
 	# incoming data
