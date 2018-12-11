@@ -19,7 +19,7 @@ Python needs to be installed on your router.
 
 3. Run the script using the command
        pbf.py -s SOURCE_IP -b BROADCAST_IP -p DESTINATION_PORT --loglevel [0-5]
-   Note that pbf.py accepts multiple `-b IP` parameters
+   Note that pbf.py accepts multiple IPs after `-b` parameters
 
 ## Testing ##
 1. Start the script on your router.
