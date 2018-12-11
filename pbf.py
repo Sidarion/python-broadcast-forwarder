@@ -168,7 +168,7 @@ def pbf_send(broadcastip, port, data, sender_socket, log_level):
 
 	sender_socket.sendto(data, (broadcastip, port))
 
-	dbg("---> Packet successfully sent \n", log_level, LOG_SUCCESS)
+	dbg(broadcastip, "---> Packet successfully sent \n", log_level, LOG_SUCCESS)
 
 
 # other functions
