@@ -60,6 +60,11 @@ def main():
 
         # if we don't increase this limit, then python will fail with
         # "Fatal Python error: Couldn't create autoTLSkey mapping"
+	#
+	# TODO: this should be handled differently. I think the issue here is that
+	#       python wants to use 1G of stack *address space* per thread.
+	#       So we should probably do RLIMIT_AS = n_threads * 1G
+	#
         # see https://stackoverflow.com/questions/13398594/fatal-python-error-couldnt-create-autotlskey-mapping-with-cherrypy
         megs = 2000
         resource.setrlimit(resource.RLIMIT_AS, (megs * 1048576L, -1L))
