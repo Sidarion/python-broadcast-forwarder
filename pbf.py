@@ -49,6 +49,7 @@ import struct
 import socket
 import thread
 from threading import Thread
+import resource
 
 # Only to have a time stamp in the diagnose output
 from datetime import datetime
@@ -56,6 +57,13 @@ from datetime import datetime
 
 def main():
 	threads = []
+
+        # if we don't increase this limit, then python will fail with
+        # "Fatal Python error: Couldn't create autoTLSkey mapping"
+        # see https://stackoverflow.com/questions/13398594/fatal-python-error-couldnt-create-autotlskey-mapping-with-cherrypy
+        megs = 2000
+        resource.setrlimit(resource.RLIMIT_AS, (megs * 1048576L, -1L))
+
 	args = Options(InputOptions)
 	
 	log_level = args.loglevel
