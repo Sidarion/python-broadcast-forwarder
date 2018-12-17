@@ -230,10 +230,10 @@ def daemonize(pidFileName):
 		sys.exit(0)
 
 
-def extract_header(header):
+def extract_header(hdr):
 # splits the header into more parts for debugging
-	src_ip = socket.inet_ntoa(header[8])
-	dst_ip = socket.inet_ntoa(header[9])
+	src_ip = socket.inet_ntoa(hdr[8])
+	dst_ip = socket.inet_ntoa(hdr[9])
 
 	# Header data: 0 - vers/IHL
 	#              1 - ToS
@@ -249,7 +249,7 @@ def extract_header(header):
 	#             11 - dst port
 
 	header_fields = ("ToS: %d, ID: %d, flags/frag: %d, TTL: %d, src: %s, dst: %s, dport: %d\n" %
-					(header[1], header[3], header[4], header[5],  src_ip,  dst_ip, header[11]))
+	                 (hdr[1] , hdr[3], hdr[4]        , hdr[5] , src_ip , dst_ip , hdr[11]))
 
 	return(header_fields)
 
