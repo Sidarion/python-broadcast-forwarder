@@ -27,9 +27,9 @@
 #########################################################################################################
 #
 # Generates a listener and forwards the packet. The following input options are available:
-# -s Source IP
-# -p Listening Port
-# -b Broadcast IP
+# -s Source_IP
+# -p Listening_Port
+# -b Broadcast_IP [Broadcast_IP] [Broadcast_IP] [...]
 # --loglevel number
 LOG_NONE          = 0 # default -  no debug, pbf.py will start daemonized
 LOG_LIFECYCLE     = 1 #         -  log start stop
@@ -47,12 +47,28 @@ import itertools
 import os
 import struct
 import socket
+import thread
+from threading import Thread
+import resource
 
 # Only to have a time stamp in the diagnose output
 from datetime import datetime
 
 
-def main():	
+def main():
+	threads = []
+
+        # if we don't increase this limit, then python will fail with
+        # "Fatal Python error: Couldn't create autoTLSkey mapping"
+	#
+	# TODO: this should be handled differently. I think the issue here is that
+	#       python wants to use 1G of stack *address space* per thread.
+	#       So we should probably do RLIMIT_AS = n_threads * 1G
+	#
+        # see https://stackoverflow.com/questions/13398594/fatal-python-error-couldnt-create-autotlskey-mapping-with-cherrypy
+        megs = 2000
+        resource.setrlimit(resource.RLIMIT_AS, (megs * 1048576L, -1L))
+
 	args = Options(InputOptions)
 	
 	log_level = args.loglevel
@@ -60,28 +76,40 @@ def main():
 	if not log_level:
 		daemonize(args.pidfile)
 
+        for broadcastip in args.broadcastip:
+		try:
+			t = Thread(target=forwarder, args=(log_level, args, broadcastip))
+			t.start()
+			threads.append(t)
+		except:
+			dbg("STARTUP", "ERROR: could not start thread", log_level, LOG_NONE)
+
+        for t in threads:
+		t.join
+
+def forwarder(log_level, args, broadcastip):
         if args.allowedsourceip is None:
 			allowed_sourceip = None
         else:
 			allowed_sourceip = struct.unpack("!4s", socket.inet_aton(args.allowedsourceip))[0]
 
 	# Create sockets
-	listener_socket = listening_socket(args.broadcastip, log_level)
-	sender_socket = sending_socket(log_level)
+	listener_socket = listening_socket(broadcastip, log_level)
+	sender_socket = sending_socket(broadcastip, log_level)
 	
 	while True:
 	# Extract Data from listening socket and send it to the sender socket
-		data2send = pbf_recv(allowed_sourceip, listener_socket, args.port, log_level)
+		data2send = pbf_recv(broadcastip, allowed_sourceip, listener_socket, args.port, log_level)
 		
 		if data2send is not None:
-			pbf_send(args.broadcastip, args.port, data2send, sender_socket, log_level)
+			pbf_send(broadcastip, args.port, data2send, sender_socket, log_level)
 
 
 # output message only message of requested log level <= log level of message
 #
-def dbg(msg, log_level, msg_level):
+def dbg(broadcastip, msg, log_level, msg_level):
 	if log_level >= msg_level:
-		print(msg)
+		print(("BCAST: %s: %s" % (broadcastip, msg)))
 
 
 # the following functions create the sockets
@@ -90,22 +118,22 @@ def listening_socket(destination, log_level):
 	listener_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_UDP)
 	listener_socket.bind((destination, 0))
 
-	dbg('Starting Listener at ' + str(datetime.now()), log_level, LOG_LIFECYCLE)
+	dbg(destination, 'Starting Listener at ' + str(datetime.now()), log_level, LOG_LIFECYCLE)
 
 	return listener_socket
 
-def sending_socket(log_level):
+def sending_socket(broadcastip, log_level):
 	sender_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
 	sender_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, True)  # Enable Broadcast
 	sender_socket.setsockopt(socket.IPPROTO_IP, socket.IP_TTL, 1)  # Set TTL = 1
 
-	dbg( ('Starting Sender at ' + str(datetime.now())) + '\n', log_level, LOG_LIFECYCLE)
+	dbg(broadcastip, ('Starting Sender at ' + str(datetime.now())) + '\n', log_level, LOG_LIFECYCLE)
 
 	return sender_socket
 
 
 # the following functions send data to the socket
-def pbf_recv(allowed_sourceip, server, port, log_level):
+def pbf_recv(broadcastip, allowed_sourceip, server, port, log_level):
 	"""Extract data from the listening socket.
 	   When allowed_sourceip is set, then
 	   * 'data' will get returned if 'src_ip == allowed_sourceip' and 'port == dst_port'.
@@ -125,17 +153,17 @@ def pbf_recv(allowed_sourceip, server, port, log_level):
 	if log_level >= LOG_TRACE:
 	# Extract complete header information for log output		
 		pkt_trace = extract_header(hdr)
-		dbg("Received Header Data: " + str(pkt_trace), log_level, LOG_TRACE)
+		dbg(broadcastip, "Received Header Data: " + str(pkt_trace), log_level, LOG_TRACE)
 
 	
 	if (allowed_sourceip is not None) and (allowed_sourceip != hdr[8]):
-		dbg("-x-> Ignoring packet, source IP doesn't match given '-s' parameter\n", log_level, LOG_FAIL)
+		dbg(broadcastip, "-x-> Ignoring packet, source IP doesn't match given '-s' parameter\n", log_level, LOG_FAIL)
 		return None
 	elif dst_port != port:
-		dbg("-x-> Ignoring packet, Destination Port doesn't match given '-p' parameter\n", log_level, LOG_FAIL)
+		dbg(broadcastip, "-x-> Ignoring packet, Destination Port doesn't match given '-p' parameter\n", log_level, LOG_FAIL)
 		return None
 	elif ttl <= 1:
-		dbg("-x-> Ignoring packet, TTL <= 1\n", log_level, LOG_FAIL)
+		dbg(broadcastip, "-x-> Ignoring packet, TTL <= 1\n", log_level, LOG_FAIL)
 		return None
 	else:
 		return data
@@ -145,7 +173,7 @@ def pbf_send(broadcastip, port, data, sender_socket, log_level):
 
 	sender_socket.sendto(data, (broadcastip, port))
 
-	dbg("---> Packet successfully sent \n", log_level, LOG_SUCCESS)
+	dbg(broadcastip, "---> Packet successfully sent \n", log_level, LOG_SUCCESS)
 
 
 # other functions
@@ -155,7 +183,7 @@ def Options(InputOptions):
 	parser = InputOptions.ArgumentParser(description='Take Inputs')
 	parser.add_argument("-s", "--allowedsourceip", type=str, required=False,
 						help="source IP address to listen for")
-	parser.add_argument("-b", "--broadcastip", type=str, required=True,
+	parser.add_argument("-b", "--broadcastip", type=str, required=True, nargs="+",
 						help="broadcast IP address to listen for")
 	parser.add_argument("-p", "--port", type=int, required=True,
 						help="UDP port to listen for (numeric)")
