@@ -1,0 +1,18 @@
+# this is an example systemd unit file
+#
+# - you'll need to change the SS.SS.SS.SS and BB.BB.BB.BB IP below to suit your needs
+# - no log level is set, which makes pbf.py daemonize and not output any logs. This
+#   should probably be changed (TODO!)
+#
+
+[Unit]
+Description=Python Broadcast Forwarder
+After=networking.service
+
+[Service]
+Type=forking
+ExecStart=/usr/bin/vrf task exec old_main /usr/local/bin/pbf.py -s SS.SS.SS.SS -b BB.BB.BB.BB -p 9
+
+[Install]
+WantedBy=network-online.target
+
