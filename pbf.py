@@ -58,16 +58,16 @@ from datetime import datetime
 def main():
 	threads = []
 
-        # if we don't increase this limit, then python will fail with
-        # "Fatal Python error: Couldn't create autoTLSkey mapping"
+	# if we don't increase this limit, then python will fail with
+	# "Fatal Python error: Couldn't create autoTLSkey mapping"
 	#
 	# TODO: this should be handled differently. I think the issue here is that
 	#       python wants to use 1G of stack *address space* per thread.
 	#       So we should probably do RLIMIT_AS = n_threads * 1G
 	#
-        # see https://stackoverflow.com/questions/13398594/fatal-python-error-couldnt-create-autotlskey-mapping-with-cherrypy
-        megs = 2000
-        resource.setrlimit(resource.RLIMIT_AS, (megs * 1048576L, -1L))
+	# see https://stackoverflow.com/questions/13398594/fatal-python-error-couldnt-create-autotlskey-mapping-with-cherrypy
+	megs = 2000
+	resource.setrlimit(resource.RLIMIT_AS, (megs * 1048576L, -1L))
 
 	args = Options(InputOptions)
 	
@@ -76,7 +76,7 @@ def main():
 	if not log_level:
 		daemonize(args.pidfile)
 
-        for broadcastip in args.broadcastip:
+	for broadcastip in args.broadcastip:
 		try:
 			t = Thread(target=forwarder, args=(log_level, args, broadcastip))
 			t.start()
@@ -84,13 +84,13 @@ def main():
 		except:
 			dbg("STARTUP", "ERROR: could not start thread", log_level, LOG_NONE)
 
-        for t in threads:
+	for t in threads:
 		t.join
 
 def forwarder(log_level, args, broadcastip):
-        if args.allowedsourceip is None:
+	if args.allowedsourceip is None:
 			allowed_sourceip = None
-        else:
+	else:
 			allowed_sourceip = struct.unpack("!4s", socket.inet_aton(args.allowedsourceip))[0]
 
 	# Create sockets
@@ -190,8 +190,8 @@ def Options(InputOptions):
 	parser.add_argument("-l", "--loglevel", type=int, required=False, default=0,
 						help="set log level. 0 let's pbf start as daemon. Look into the header of pbf.py for log level descriptions")
 	parser.add_argument("--pidfile", type=str, required=False,
-                        help=("write PID to FILE"), metavar="FILE")
-	
+						help=("write PID to FILE"), metavar="FILE")
+
 	parser.set_defaults(pidfile=None)
 	options = parser.parse_args()
 	
@@ -213,20 +213,20 @@ def daemonize(pidFileName):
 		pidFile = open(pidFileName, "w")
 
 	pid = os.fork()
-    
+
 	if pid == 0: # If child process: Remove rights
 		os.setsid()
 		os.chdir("/")
-        for fd in (0, 1, 2):
-            os.close(fd)
-        if pidFileName:
-            pidFile.close()
+		for fd in (0, 1, 2):
+			os.close(fd)
+		if pidFileName:
+			pidFile.close()
 
 	else: # If parent process: Terminate process
 		if pidFileName:
 			pidFile.write("%d\n" % pid)
 			pidFile.close()
-        # Parent process exits immediately.
+		# Parent process exits immediately.
 		sys.exit(0)
 
 
@@ -255,4 +255,4 @@ def extract_header(header):
 
 		
 if __name__ == "__main__":
-    main()
+	main()
