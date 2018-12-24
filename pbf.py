@@ -58,16 +58,16 @@ from datetime import datetime
 def main():
 	threads = []
 
-	# if we don't increase this limit, then python will fail with
-	# "Fatal Python error: Couldn't create autoTLSkey mapping"
+        # if we don't increase this limit, then python will fail with
+        # "Fatal Python error: Couldn't create autoTLSkey mapping"
 	#
 	# TODO: this should be handled differently. I think the issue here is that
 	#       python wants to use 1G of stack *address space* per thread.
 	#       So we should probably do RLIMIT_AS = n_threads * 1G
 	#
-	# see https://stackoverflow.com/questions/13398594/fatal-python-error-couldnt-create-autotlskey-mapping-with-cherrypy
-	megs = 2000
-	resource.setrlimit(resource.RLIMIT_AS, (megs * 1048576L, -1L))
+        # see https://stackoverflow.com/questions/13398594/fatal-python-error-couldnt-create-autotlskey-mapping-with-cherrypy
+        megs = 2000
+        resource.setrlimit(resource.RLIMIT_AS, (megs * 1048576L, -1L))
 
 	args = Options(InputOptions)
 	
@@ -79,6 +79,7 @@ def main():
 	for broadcastip in args.broadcastip:
 		try:
 			t = Thread(target=forwarder, args=(log_level, args, broadcastip))
+			t.daemon = True
 			t.start()
 			threads.append(t)
 		except:
@@ -88,9 +89,9 @@ def main():
 		t.join
 
 def forwarder(log_level, args, broadcastip):
-	if args.allowedsourceip is None:
+        if args.allowedsourceip is None:
 			allowed_sourceip = None
-	else:
+        else:
 			allowed_sourceip = struct.unpack("!4s", socket.inet_aton(args.allowedsourceip))[0]
 
 	# Create sockets
@@ -132,7 +133,7 @@ def sending_socket(broadcastip, log_level):
 	return sender_socket
 
 
-# the following functions send data to the socket
+# Extract Header and Data from incoming packets
 def pbf_recv(broadcastip, allowed_sourceip, server, port, log_level):
 	"""Extract data from the listening socket.
 	   When allowed_sourceip is set, then
@@ -168,17 +169,19 @@ def pbf_recv(broadcastip, allowed_sourceip, server, port, log_level):
 	else:
 		return data
 
+
+# Sends data to the sender socket
 def pbf_send(broadcastip, port, data, sender_socket, log_level):
-# Send data to the sender socket
 
 	sender_socket.sendto(data, (broadcastip, port))
 
 	dbg(broadcastip, "---> Packet successfully sent \n", log_level, LOG_SUCCESS)
 
 
-# other functions
+# other functions:
+
+## Options Parser
 def Options(InputOptions):
-# Options Parser
 
 	parser = InputOptions.ArgumentParser(description='Take Inputs')
 	parser.add_argument("-s", "--allowedsourceip", type=str, required=False,
@@ -190,8 +193,8 @@ def Options(InputOptions):
 	parser.add_argument("-l", "--loglevel", type=int, required=False, default=0,
 						help="set log level. 0 let's pbf start as daemon. Look into the header of pbf.py for log level descriptions")
 	parser.add_argument("--pidfile", type=str, required=False,
-						help=("write PID to FILE"), metavar="FILE")
-
+                        help=("write PID to FILE"), metavar="FILE")
+	
 	parser.set_defaults(pidfile=None)
 	options = parser.parse_args()
 	
@@ -205,35 +208,34 @@ def Options(InputOptions):
 	return options
 
 
+## Creates a child process and terminates the parent process
 def daemonize(pidFileName):
-# Creates a child process and terminates the parent process
 
 	if pidFileName:
 	# If option set, create file to write process ID in it later
 		pidFile = open(pidFileName, "w")
 
 	pid = os.fork()
-
+    
 	if pid == 0: # If child process: Remove rights
 		os.setsid()
 		os.chdir("/")
-		for fd in (0, 1, 2):
-			os.close(fd)
-		if pidFileName:
-			pidFile.close()
+        for fd in (0, 1, 2):
+            os.close(fd)
+        if pidFileName:
+            pidFile.close()
 
 	else: # If parent process: Terminate process
 		if pidFileName:
 			pidFile.write("%d\n" % pid)
 			pidFile.close()
-		# Parent process exits immediately.
+        # Parent process exits immediately.
 		sys.exit(0)
 
-
-def extract_header(hdr):
-# splits the header into more parts for debugging
-	src_ip = socket.inet_ntoa(hdr[8])
-	dst_ip = socket.inet_ntoa(hdr[9])
+## Creates a child process and terminates the parent process
+def extract_header(header):
+	src_ip = socket.inet_ntoa(header[8])
+	dst_ip = socket.inet_ntoa(header[9])
 
 	# Header data: 0 - vers/IHL
 	#              1 - ToS
@@ -249,10 +251,10 @@ def extract_header(hdr):
 	#             11 - dst port
 
 	header_fields = ("ToS: %d, ID: %d, flags/frag: %d, TTL: %d, src: %s, dst: %s, dport: %d\n" %
-	                 (hdr[1] , hdr[3], hdr[4]        , hdr[5] , src_ip , dst_ip , hdr[11]))
+					(header[1], header[3], header[4], header[5],  src_ip,  dst_ip, header[11]))
 
 	return(header_fields)
 
 		
 if __name__ == "__main__":
-	main()
+    main()
